@@ -29,23 +29,74 @@ describe('Test Order', () => {
     //Act:
     //Setup the Mock API
     setupMock();
+    //Mock API calls
+    const mockGet = jest.spyOn(axios, 'get');
+    mockGet.mockImplementation((url) => {
+      switch (url) {
+        case `${API_URL}/api/delivery/test-fun/0`:
+          return Promise.resolve({
+            data: {
+              status: 'success',
+              data: 2.5,
+            },
+          });
+        case `${API_URL}/api/delivery/test-fun/5`:
+          return Promise.resolve({
+            data: {
+              status: 'success',
+              data: 5.0,
+            },
+          });
+        case `${API_URL}/api/subtotal/test-fun`:
+          return Promise.resolve({
+            data: {
+              status: 'success',
+              data: 5,
+            },
+          });
+        case `${API_URL}/api/tax/test-fun/5`:
+          return Promise.resolve({
+            data: {
+              status: 'success',
+              data: 0.86,
+            },
+          });
+        case `${API_URL}/api/total/test-fun/5`:
+          return Promise.resolve({
+            data: {
+              status: 'success',
+              data: 10.86,
+            },
+          });
+        default:
+          return Promise.resolve({
+            data: {
+              status: 'fail',
+            },
+          });
+      }
+    });
+  });
+
+  it('Test Delivery Fee', async () => {
+    //ACT
     //Call the page
     render(
       <OrderContext.Provider value={{ orderName, orderItems }}>
         <Order />
       </OrderContext.Provider>
     );
-    //Assert: replace the return true.
+
+    //ASSERT
+    //Check for subtotal and delivery fee
     await waitFor(() => {
-      return true;
+      expect(screen.getAllByText('$2.50')).toHaveLength(1);
     });
+    expect(screen.getAllByText('$5.00')).toHaveLength(1);
   });
 
-  test('Test Update Delivery Fee', async () => {
-    //Modify the delivery distance and verify that the delivery fee is updated
-    //Act:
-    //Setup the Mock API
-    setupMock();
+  it('Test Update Delivery Fee', async () => {
+    //ACT
     //Call the page
     render(
       <OrderContext.Provider value={{ orderName, orderItems }}>
@@ -61,10 +112,18 @@ describe('Test Order', () => {
       // Find and select the 5 mile option, like a real user would.
       screen.getByRole('option', { name: '5 miles' })
     );
-    //Assert: replace the return true.
+
+    //ASSERT
+    //Once the dropdown value for the delivery distance is changed, an API call will be made to determine the delivery fee
+    //Wait for the API call to return and the delivery fee to be updated
     await waitFor(() => {
-      return true;
+      //The delivery fee and the subtotal should be $5.00.  So there should be 2.
+      expect(screen.getAllByText('$5.00')).toHaveLength(2);
     });
+    //Check the tax
+    expect(screen.getAllByText('$0.86')).toHaveLength(1);
+    //Check the total.
+    expect(screen.getAllByText('$10.86')).toHaveLength(1);
   });
 });
 
